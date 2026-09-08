@@ -40,6 +40,6 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  constole.log(`[MedGate Backend] Server running on port ${PORT}`);
-  console.log(`MedGate Backend] Allowed CORS Origin: ${clientUrl}`);
+  console.log(`[MedGate Backend] Server running on port ${PORT}`);
+  console.log(`[MedGate Backend] Allowed CORS Origin: ${clientUrl}`);
 });
