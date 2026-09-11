@@ -3,3 +3,7 @@ node_modules/
 .env*.local
 npm-debug.log*
 .DS_Store
+
+# Synthea non-clinical/billing files
+data/synthea/claims*.csv
+data/synthea/payer*.csv

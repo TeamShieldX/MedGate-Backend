@@ -1,38 +1,35 @@
 /**
- * Audit Log Controller (Placeholder)
- * Serves access audit log entries for GET /audit-log
+ * Audit Log Controller - SHI-7 & SHI-8
+ * MedGate Backend
+ * 
+ * Serves real tamper-evident access audit log entries.
  */
 
-const mockAuditLogs = [
-  {
-    id: 'log-001',
-    timestamp: new Date().toISOString(),
-    user: 'usr-101',
-    role: 'Doctor',
-    action: 'read',
-    resource: 'patients',
-    result: 'GRANTED',
-    reason: "Access granted to resource 'patients' for role 'Doctor'",
-  },
-  {
-    id: 'log-002',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    user: 'usr-102',
-    role: 'Receptionist',
-    action: 'read',
-    resource: 'patients/pat-001/clinical-notes',
-    result: 'DENIED',
-    reason: "Access denied: Role 'Receptionist' lacks permission on clinical notes",
-  },
-];
+const { getAuditLogs: fetchAuditLogs, verifyLogIntegrity } = require('../services/auditLogger');
 
+/**
+ * GET /audit-log
+ * Retrieves recorded access events with optional filtering by role or result.
+ */
 async function getAuditLogs(req, res, next) {
   try {
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const role = req.query.role || null;
+    const result = req.query.result || null;
+
+    const logs = await fetchAuditLogs({ limit, offset, role, result });
+    const integrity = verifyLogIntegrity();
+
     res.status(200).json({
       success: true,
-      count: mockAuditLogs.length,
-      data: mockAuditLogs,
-      note: 'Placeholder audit logs. Tamper-evident log table integration coming next.',
+      count: logs.data.length,
+      total: logs.total,
+      integrity: {
+        tamperEvidentChainValid: integrity.valid,
+        totalEntriesVerified: integrity.checkedEntries,
+      },
+      data: logs.data,
     });
   } catch (error) {
     next(error);

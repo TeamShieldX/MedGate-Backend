@@ -1,27 +1,60 @@
 /**
- * Access Decision Logic Service (Placeholder for SHI-7 & SHI-8)
+ * Access Decision Logic - SHI-7
+ * MedGate Backend
  * 
- * Single entry point: evaluateAccess(user, resource, action) -> { allowed, reason }
- * - Invokes RBAC engine (services/rbac.js)
- * - Emits audit log entry on every access attempt
- * - Returns clear human-readable reason for denials
+ * Provides the single centralized entry point for access control decisions:
+ * - Evaluates requests through the RBAC engine
+ * - Enforces least-privilege default-deny with human-readable explanations
+ * - Guarantees an immutable audit log entry for every evaluation (granted or denied)
  */
 
-const { checkPermission } = require('./rbac');
+const { hasPermission, normalizeRole } = require('./rbac');
+const { recordAccessEvent } = require('./auditLogger');
 
-async function evaluateAccess(user, resource, action) {
-  if (!user || !user.role) {
-    return {
-      allowed: false,
-      reason: 'Authentication required. No user role specified.',
-    };
-  }
+/**
+ * Single entry point for all access decisions.
+ * Evaluates whether a user can perform an action on a resource,
+ * and writes to the audit log regardless of outcome.
+ * 
+ * @param {Object} user - The requesting user { id, username, role }
+ * @param {string} resource - Target resource (e.g. 'patients', 'clinical-notes')
+ * @param {string} action - Requested action ('read', 'write', 'update', 'delete')
+ * @param {Object} [context] - Additional request context { resourceId, ipAddress, reason }
+ * @returns {Promise<{ allowed: boolean, reason: string, auditLogId: string, timestamp: string, role: string }>}
+ */
+async function evaluateAccess(user = {}, resource = '', action = 'read', context = {}) {
+  const role = user.role || 'Unauthenticated';
+  const resourceNormalized = (resource || '').trim().toLowerCase();
+  const actionNormalized = (action || 'read').trim().toLowerCase();
 
-  const allowed = checkPermission(user.role, resource, action);
-  const reason = allowed
-    ? `Access granted to resource '${resource}' for role '${user.role}'`
-    : `Access denied: Role '${user.role}' lacks permission '${action}' on '${resource}'`;
-  return { allowed, reason };
+  // 1. Evaluate permission using RBAC engine
+  const rbacResult = hasPermission(role, resourceNormalized, actionNormalized);
+
+  const allowed = rbacResult.allowed;
+  const reason = rbacResult.reason;
+  const normalizedRole = rbacResult.normalizedRole || role;
+
+  // 2. Record audit log entry (Every decision is logged, granted or denied)
+  const auditEntry = await recordAccessEvent({
+    user: {
+      ...user,
+      role: normalizedRole,
+    },
+    resource: resourceNormalized,
+    action: actionNormalized,
+    result: allowed ? 'GRANTED' : 'DENIED',
+    reason,
+    resourceId: context.resourceId || null,
+    ipAddress: context.ipAddress || context.ip || '127.0.0.1',
+  });
+
+  return {
+    allowed,
+    reason,
+    auditLogId: auditEntry.id,
+    timestamp: auditEntry.timestamp,
+    role: normalizedRole,
+  };
 }
 
 module.exports = {
