@@ -47,6 +47,7 @@ async function recordAccessEvent({
   reason = '',
   resourceId = null,
   ipAddress = '127.0.0.1',
+  skipDb = false,
 }) {
   const timestamp = new Date().toISOString();
   const userId = user.id || 'anonymous';
@@ -74,10 +75,11 @@ async function recordAccessEvent({
   // Append to in-memory store
   auditLogStore.push(entry);
 
-  // Write to PostgreSQL database if connected
-  const dbConnected = await checkDbConnection();
-  if (dbConnected) {
-    try {
+  // Write to PostgreSQL database if connected and not explicitly skipped
+  if (!skipDb) {
+    const dbConnected = await checkDbConnection();
+    if (dbConnected) {
+      try {
       const query = `
         INSERT INTO audit_logs (user_id, username, role, action, resource, resource_id, result, reason, ip_address, timestamp)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -99,6 +101,7 @@ async function recordAccessEvent({
     } catch (err) {
       console.warn('[AuditLogger] PostgreSQL insert failed, retained in tamper-evident memory store:', err.message);
     }
+  }
   }
 
   return entry;
@@ -141,11 +144,11 @@ async function getAuditLogs({ limit = 50, offset = 0, role = null, result = null
       const offsetIdx = params.length;
 
       const query = `
-        SELECT id, user_id as "userId", username, role, action, resource,
+        SELECT ('log-' || id) as id, user_id as "userId", username, role, action, resource,
                resource_id as "resourceId", result, reason, ip_address as "ipAddress", timestamp
         FROM audit_logs
         ${whereStr}
-        ORDER BY timestamp DESC
+        ORDER BY id DESC
         LIMIT $${limitIdx} OFFSET $${offsetIdx}
       `;
       const res = await pool.query(query, params);
@@ -217,11 +220,19 @@ function verifyLogIntegrity() {
 }
 
 /**
- * Resets the in-memory audit log store (primarily for unit testing).
+ * Resets the audit log store and database table (primarily for unit testing).
  */
-function resetAuditLogStore() {
+async function resetAuditLogStore() {
   auditLogStore.length = 0;
   lastLogHash = '0000000000000000000000000000000000000000000000000000000000000000';
+  const dbConnected = await checkDbConnection();
+  if (dbConnected) {
+    try {
+      await pool.query('TRUNCATE TABLE audit_logs RESTART IDENTITY');
+    } catch (err) {
+      // Ignored if table not created
+    }
+  }
 }
 
 module.exports = {
