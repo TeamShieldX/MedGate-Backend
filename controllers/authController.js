@@ -3,21 +3,31 @@
  * Handles login requests returning mock authentication tokens and user details
  */
 
+const { isValidRole, normalizeRole } = require('../services/rbac');
+
 async function login(req, res, next) {
   try {
     const { role, username } = req.body || {};
-    const selectedRole = role || 'Doctor';
+
+    if (role && !isValidRole(role)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid role '${role}'. Allowed roles: Doctor, Nurse, Researcher, Receptionist, Administrator.`,
+      });
+    }
+
+    const selectedRole = normalizeRole(role) || 'Doctor';
     const selectedUsername = username || 'dr_smith';
 
     res.status(200).json({
       success: true,
       message: 'Login successful (Mock)',
       data: {
-        token: 'mock-jwt-token-medgate-sec-2026',
+        token: `mock-token-${selectedRole.toLowerCase()}-2026`,
         user: {
-          id: 'usr-101',
+          id: `usr-${selectedRole.toLowerCase()}-101`,
           username: selectedUsername,
-          name: 'Demo User',
+          name: `${selectedRole} User`,
           role: selectedRole,
         },
       },

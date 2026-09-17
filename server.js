@@ -39,7 +39,11 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`[MedGate Backend] Server running on port ${PORT}`);
-  console.log(`[MedGate Backend] Allowed CORS Origin: ${clientUrl}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`[MedGate Backend] Server running on port ${PORT}`);
+    console.log(`[MedGate Backend] Allowed CORS Origin: ${clientUrl}`);
+  });
+}
+
+module.exports = app;

@@ -1,59 +1,60 @@
 /**
- * Patient Controller (Placeholder)
- * Returns mock patient records for GET /patients and GET /patients/:id
+ * Patient Controller - SHI-6 & SHI-7
+ * MedGate Backend
+ * 
+ * Serves Synthea patient records with strict role-based access gating.
  */
 
-const mockPatients = [
-  {
-    id: 'pat-001',
-    firstName: 'Sarah',
-    lastName: 'Connor',
-    gender: 'F',
-    birthDate: '1985-05-14',
-    primaryCondition: 'Hypertension',
-    assignedDoctor: 'Dr. Smith',
-    confidentialNotes: 'Restricted access: High security patient',
-  },
-  {
-    id: 'pat-002',
-    firstName: 'John',
-    lastName: 'Doe',
-    gender: 'M',
-    birthDate: '1990-11-22',
-    primaryCondition: 'Type 2 Diabetes',
-    assignedDoctor: 'Dr. Smith',
-    confidentialNotes: 'Regular checkup required',
-  },
-];
+const { getAllPatients, getPatientById: fetchPatientById } = require('../db/patientRepository');
 
+/**
+ * GET /patients
+ * Returns list of patients filtered according to requesting role permissions.
+ */
 async function getPatients(req, res, next) {
   try {
     const role = req.accessContext?.user?.role || 'Doctor';
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+
+    const result = await getAllPatients({ role, limit, offset });
 
     res.status(200).json({
       success: true,
-      count: mockPatients.length,
+      count: result.data.length,
+      total: result.total,
       accessRole: role,
-      data: mockPatients,
-      note: 'Placeholder response. Real filtered patient data via Synthea & RBAC coming next.',
+      data: result.data,
     });
   } catch (error) {
     next(error);
   }
 }
 
+/**
+ * GET /patients/:id
+ * Returns a specific patient record with clinical entities,
+ * applying field-level access gating based on role.
+ */
 async function getPatientById(req, res, next) {
   try {
     const { id } = req.params;
-    const patient = mockPatients.find((p) => p.id === id) || mockPatients[0];
+    const role = req.accessContext?.user?.role || 'Doctor';
+
+    const patient = await fetchPatientById(id, { role });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found',
+        requestedId: id,
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: {
-        ...patient,
-        requestedId: id,
-      },
-      note: 'Placeholder response. Field-level filtering will apply based on role.',
+      accessRole: role,
+      data: patient,
     });
   } catch (error) {
     next(error);
