@@ -162,7 +162,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
   for (const c of rawConditions) {
     if (patientIds.has(c.PATIENT)) {
       const patient = patientMap.get(c.PATIENT);
-      if (patient) {
+      if (patient && patient.diagnoses.length < 15) {
         if (patient.primaryCondition === 'Under Evaluation') {
           patient.primaryCondition = c.DESCRIPTION;
         }
@@ -184,7 +184,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
   for (const m of rawMeds) {
     if (patientIds.has(m.PATIENT)) {
       const patient = patientMap.get(m.PATIENT);
-      if (patient) {
+      if (patient && patient.medications.length < 15) {
         patient.medications.push({
           id: randomUUID(),
           patient_id: m.PATIENT,
