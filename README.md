@@ -1,9 +1,9 @@
 # MedGate Backend — Zero-Trust Healthcare RBAC & Clinical Gateway
 
-**Team ShieldX — ICSC Hackathon 2026**  
+**[Team ShieldX](https://github.com/TeamShieldX) — ICSC Hackathon 2026**  
 **Track C: Health & Medical Systems — Safe Access to Patient Records**  
-*Lead Developer:* SAMKIEL  
-*Backend Contributors:* Moyin (RBAC, Data Layer & Decision Logic), SAMKIEL (Audit Logging, API & Scalability)  
+*Lead Developer:* [SAMKIEL](https://github.com/samkiell)  
+*Backend Contributors:* [Moyin](https://github.com/MRMcyber) (RBAC, Data Layer & Decision Logic), [SAMKIEL](https://github.com/samkiell) (Audit Logging, API & Scalability)  
 *Status:* Verified & Production-Ready (**44/44 Automated Tests Passing** | **100% Hash-Chain Integrity**)
 
 ---
@@ -267,7 +267,7 @@ MedGate-Backend/
 
 ## 11. Team ShieldX
 
-- **samkiel** — Lead Developer: Audit Logging (SHI-8), API Layer (SHI-9), Scalability & Benchmark Testing (SHI-10), Frontend Integration
-- **Moyin** — Backend Lead: Access Control Engine (SHI-5), Data Layer & Synthea (SHI-6), Access Decision Logic (SHI-7)
-- **Habib** — Frontend Developer: Client Interface & UI Components (SHI-11)
-- **symplyiisha** — Technical Documentation & Demo Presentation (SHI-12, SHI-13)
+- **[SAMKIEL (@samkiell)](https://github.com/samkiell)** — Lead Developer: Audit Logging (SHI-8), API Layer (SHI-9), Scalability & Benchmark Testing (SHI-10), Frontend Integration
+- **[Moyin (@MRMcyber)](https://github.com/MRMcyber)** — Backend Lead: Access Control Engine (SHI-5), Data Layer & Synthea (SHI-6), Access Decision Logic (SHI-7)
+- **[Habib (@profecyb443)](https://github.com/profecyb443)** — Frontend Developer: Client Interface & UI Components (SHI-11)
+- **[symplyiisha (@symplyiishascreations)](https://github.com/symplyiishascreations)** — Technical Documentation & Demo Presentation (SHI-12, SHI-13)
