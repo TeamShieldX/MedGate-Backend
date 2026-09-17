@@ -267,7 +267,7 @@ MedGate-Backend/
 
 ## 11. Team ShieldX
 
-- **[SAMKIEL (@samkiell)](https://github.com/samkiell)** — Lead Developer: Audit Logging (SHI-8), API Layer (SHI-9), Scalability & Benchmark Testing (SHI-10), Frontend Integration
-- **[Moyin (@MRMcyber)](https://github.com/MRMcyber)** — Backend Lead: Access Control Engine (SHI-5), Data Layer & Synthea (SHI-6), Access Decision Logic (SHI-7)
-- **[Habib (@profecyb443)](https://github.com/profecyb443)** — Frontend Developer: Client Interface & UI Components (SHI-11)
-- **[symplyiisha (@symplyiishascreations)](https://github.com/symplyiishascreations)** — Technical Documentation & Demo Presentation (SHI-12, SHI-13)
+- **[SAMKIEL](https://github.com/samkiell)** — Lead Developer: Audit Logging (SHI-8), API Layer (SHI-9), Scalability & Benchmark Testing (SHI-10), Frontend Integration
+- **[Moyin](https://github.com/MRMcyber)** — Backend Lead: Access Control Engine (SHI-5), Data Layer & Synthea (SHI-6), Access Decision Logic (SHI-7)
+- **[Habib](https://github.com/profecyb443)** — Frontend Developer: Client Interface & UI Components (SHI-11)
+- **[symplyiisha](https://github.com/symplyiishascreations)** — Technical Documentation & Demo Presentation (SHI-12, SHI-13)
