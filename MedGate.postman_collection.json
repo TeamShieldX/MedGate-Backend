@@ -1,0 +1,506 @@
+{
+  "info": {
+    "_postman_id": "c760bca1-923f-4e08-9df8-medgate-collection",
+    "name": "MedGate Healthcare Gateway API",
+    "description": "Postman Collection for MedGate Zero-Trust Role-Based Access Control (RBAC) Gateway and Electronic Health Records (EHR) API.\n\nEnforces least privilege, dynamic field redaction, and cryptographic SHA-256 tamper-evident audit logging.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "patientId",
+      "value": "cc3eac4a-34a7-9a15-1522-8087135631b7",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Checks backend operational status and uptime."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication (SHI-9)",
+      "item": [
+        {
+          "name": "Login - Doctor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Doctor\",\n  \"username\": \"dr_moyin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates as Doctor with broad clinical permissions."
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Nurse",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Nurse\",\n  \"username\": \"nurse_joy\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Receptionist",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Receptionist\",\n  \"username\": \"rec_frontdesk\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Researcher",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Researcher\",\n  \"username\": \"res_turing\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Administrator",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Administrator\",\n  \"username\": \"admin_root\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Invalid Role (400 Test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Error message received', function () { pm.expect(jsonData.success).to.eql(false); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SuperHacker\",\n  \"username\": \"bad_actor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Verifies that invalid roles are rejected with 400 Bad Request."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Patient Access & Field Redaction (SHI-5 & SHI-7)",
+      "item": [
+        {
+          "name": "Get Patients - Doctor (Full Clinical Payload)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Doctor sees confidentialNotes', function () {",
+                  "    pm.expect(jsonData.data[0]).to.have.property('confidentialNotes');",
+                  "});",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.collectionVariables.set('patientId', jsonData.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Doctor" },
+              { "key": "x-user-id", "value": "doc-101" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "Returns full clinical records including confidential physician notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Patients - Nurse (Medications visible, Notes Redacted)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('confidentialNotes stripped for Nurse', function () {",
+                  "    pm.expect(jsonData.data[0].confidentialNotes).to.be.undefined;",
+                  "});",
+                  "pm.test('Medications and observations retained', function () {",
+                  "    pm.expect(jsonData.data[0]).to.have.property('medications');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Nurse" },
+              { "key": "x-user-id", "value": "nurse-202" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "Returns medical data but redacts confidential physician notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Patients - Receptionist (Clinical Fields Redacted)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Clinical fields stripped for Receptionist', function () {",
+                  "    pm.expect(jsonData.data[0].confidentialNotes).to.be.undefined;",
+                  "    pm.expect(jsonData.data[0].diagnoses).to.be.undefined;",
+                  "    pm.expect(jsonData.data[0].medications).to.be.undefined;",
+                  "});",
+                  "pm.test('Demographics and appointments preserved', function () {",
+                  "    pm.expect(jsonData.data[0]).to.have.property('firstName');",
+                  "    pm.expect(jsonData.data[0]).to.have.property('lastName');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Receptionist" },
+              { "key": "x-user-id", "value": "rec-303" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "Returns demographic & appointment info, stripping diagnoses, medications, and clinical notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Patients - Researcher (PII Stripped / De-identified)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('PII stripped for Researcher', function () {",
+                  "    pm.expect(jsonData.data[0].firstName).to.be.undefined;",
+                  "    pm.expect(jsonData.data[0].lastName).to.be.undefined;",
+                  "    pm.expect(jsonData.data[0].address).to.be.undefined;",
+                  "    pm.expect(jsonData.data[0].phone).to.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Researcher" },
+              { "key": "x-user-id", "value": "res-404" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "De-identifies patient records by stripping names, phone numbers, and physical addresses."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Patient - Doctor (Deep Clinical Graph)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Doctor" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}"]
+            },
+            "description": "Retrieves complete clinical graph (encounters, medications, vitals, allergies) for patient."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Patient - Nurse View",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Nurse" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Patient - Receptionist View",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Receptionist" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Audit Logging & Cryptographic Integrity (SHI-8)",
+      "item": [
+        {
+          "name": "Get Audit Logs - Administrator (Granted 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Tamper-evident chain is valid', function () {",
+                  "    pm.expect(jsonData.integrity.tamperEvidentChainValid).to.eql(true);",
+                  "});",
+                  "pm.test('Logs returned', function () {",
+                  "    pm.expect(jsonData.count).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Administrator" },
+              { "key": "x-user-id", "value": "admin-001" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-log?limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit-log"],
+              "query": [{ "key": "limit", "value": "25" }]
+            },
+            "description": "Admin view displaying chronological access history and verifying SHA-256 hash-chain integrity."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs - Receptionist (Forbidden 403 Test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns forbidden reason and auditLogId', function () {",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData.error).to.eql('Forbidden');",
+                  "    pm.expect(jsonData).to.have.property('auditLogId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Receptionist" },
+              { "key": "x-user-id", "value": "rec-002" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-log",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit-log"]
+            },
+            "description": "Verifies that non-administrators are denied with 403 Forbidden and that the denial itself is logged."
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Audit Logs - Role (Doctor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Administrator" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-log?role=Doctor&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit-log"],
+              "query": [
+                { "key": "role", "value": "Doctor" },
+                { "key": "limit", "value": "25" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Audit Logs - Result (DENIED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-user-role", "value": "Administrator" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-log?result=DENIED&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit-log"],
+              "query": [
+                { "key": "result", "value": "DENIED" },
+                { "key": "limit", "value": "25" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
