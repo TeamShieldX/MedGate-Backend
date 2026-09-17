@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('crypto');
 
 const SYNTHEA_DATA_DIR = path.join(__dirname, '..', 'data', 'synthea');
 
@@ -141,7 +142,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
       immunizations: [],
       appointments: [
         {
-          id: `apt-${idx + 1}`,
+          id: randomUUID(),
           patient_id: id,
           doctor_name: assignedDoctor,
           department,
@@ -166,7 +167,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
           patient.primaryCondition = c.DESCRIPTION;
         }
         patient.diagnoses.push({
-          id: `diag-${patient.diagnoses.length + 1}`,
+          id: randomUUID(),
           patient_id: c.PATIENT,
           code: c.CODE,
           description: c.DESCRIPTION,
@@ -185,7 +186,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
       const patient = patientMap.get(m.PATIENT);
       if (patient) {
         patient.medications.push({
-          id: `med-${patient.medications.length + 1}`,
+          id: randomUUID(),
           patient_id: m.PATIENT,
           code: m.CODE,
           description: m.DESCRIPTION,
@@ -206,14 +207,14 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
       const patient = patientMap.get(e.PATIENT);
       if (patient && patient.encounters.length < 10) {
         patient.encounters.push({
-          id: e.Id,
+          id: e.Id || randomUUID(),
           patient_id: e.PATIENT,
           encounter_type: e.ENCOUNTERCLASS,
           code: e.CODE,
           description: e.DESCRIPTION,
           provider: patient.assignedDoctor,
           start_date: e.START,
-          end_date: e.STOP,
+          end_date: e.STOP || null,
         });
       }
     }
@@ -227,7 +228,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
       const patient = patientMap.get(o.PATIENT);
       if (patient && patient.observations.length < 15) {
         patient.observations.push({
-          id: `obs-${patient.observations.length + 1}`,
+          id: randomUUID(),
           patient_id: o.PATIENT,
           code: o.CODE,
           description: o.DESCRIPTION,
@@ -247,7 +248,7 @@ function loadSyntheaPatients({ limit = 50 } = {}) {
       const patient = patientMap.get(a.PATIENT);
       if (patient) {
         patient.allergies.push({
-          id: `alg-${patient.allergies.length + 1}`,
+          id: randomUUID(),
           patient_id: a.PATIENT,
           allergen: a.DESCRIPTION,
           reaction: a.DESCRIPTION1 || 'Hypersensitivity',

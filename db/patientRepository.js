@@ -8,6 +8,7 @@
  */
 
 const { pool } = require('./index');
+const { randomUUID } = require('crypto');
 const { loadSyntheaPatients } = require('./syntheaLoader');
 const { CANONICAL_SYNTHEA_PATIENTS, generateSyntheaDataset } = require('./syntheaDataset');
 const { filterFields, RESOURCES } = require('../services/rbac');
@@ -181,7 +182,7 @@ async function seedDataset(count = 50) {
             await client.query(
               `INSERT INTO encounters (id, patient_id, encounter_type, code, description, provider, start_date, end_date)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
-              [enc.id, p.id, enc.encounter_type, enc.code, enc.description, enc.provider, enc.start_date, enc.end_date]
+              [enc.id || randomUUID(), p.id, enc.encounter_type, enc.code, enc.description, enc.provider, enc.start_date || new Date().toISOString(), enc.end_date || null]
             );
           }
         }
@@ -191,7 +192,7 @@ async function seedDataset(count = 50) {
             await client.query(
               `INSERT INTO diagnoses (id, patient_id, code, description, onset_date, status)
                VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
-              [d.id, p.id, d.code, d.description, d.onset_date, d.status]
+              [d.id || randomUUID(), p.id, d.code, d.description, d.onset_date || null, d.status || 'active']
             );
           }
         }
@@ -201,7 +202,7 @@ async function seedDataset(count = 50) {
             await client.query(
               `INSERT INTO medications (id, patient_id, code, description, dosage, status, start_date, end_date)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
-              [m.id, p.id, m.code, m.description, m.dosage, m.status, m.start_date, m.end_date]
+              [m.id || randomUUID(), p.id, m.code, m.description, m.dosage, m.status || 'active', m.start_date || null, m.end_date || null]
             );
           }
         }
@@ -211,7 +212,47 @@ async function seedDataset(count = 50) {
             await client.query(
               `INSERT INTO observations (id, patient_id, code, description, value, unit, recorded_date)
                VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
-              [o.id, p.id, o.code, o.description, o.value, o.unit, o.recorded_date]
+              [o.id || randomUUID(), p.id, o.code, o.description, o.value, o.unit, o.recorded_date || new Date().toISOString()]
+            );
+          }
+        }
+
+        if (p.allergies) {
+          for (const a of p.allergies) {
+            await client.query(
+              `INSERT INTO allergies (id, patient_id, allergen, reaction, severity, recorded_date)
+               VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
+              [a.id || randomUUID(), p.id, a.allergen, a.reaction, a.severity, a.recorded_date || null]
+            );
+          }
+        }
+
+        if (p.procedures) {
+          for (const pr of p.procedures) {
+            await client.query(
+              `INSERT INTO procedures (id, patient_id, code, description, performed_date)
+               VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+              [pr.id || randomUUID(), p.id, pr.code, pr.description, pr.performed_date || null]
+            );
+          }
+        }
+
+        if (p.immunizations) {
+          for (const im of p.immunizations) {
+            await client.query(
+              `INSERT INTO immunizations (id, patient_id, vaccine_code, description, administered_date)
+               VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+              [im.id || randomUUID(), p.id, im.vaccine_code, im.description, im.administered_date || null]
+            );
+          }
+        }
+
+        if (p.appointments) {
+          for (const ap of p.appointments) {
+            await client.query(
+              `INSERT INTO appointments (id, patient_id, doctor_name, department, appointment_date, status, notes)
+               VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
+              [ap.id || randomUUID(), p.id, ap.doctor_name, ap.department, ap.appointment_date || new Date().toISOString(), ap.status || 'scheduled', ap.notes]
             );
           }
         }
