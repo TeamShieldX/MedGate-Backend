@@ -31,7 +31,7 @@ async function runTestAsync(description, testFn) {
 (async () => {
   console.log('=== MedGate Access Decision Logic Test Suite (SHI-7) ===\n');
 
-  resetAuditLogStore();
+  await resetAuditLogStore();
 
   // 1. Single Entry Point Evaluation Tests
   console.log('1. Single Entry Point evaluateAccess():');
