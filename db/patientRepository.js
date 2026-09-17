@@ -146,6 +146,24 @@ async function getPatientById(id, { role = 'Doctor' } = {}) {
   return filterFields(role, RESOURCES.PATIENTS, found);
 }
 
+async function batchInsert(client, table, columns, rows) {
+  if (!rows || rows.length === 0) return;
+  const colNames = columns.join(', ');
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const chunk = rows.slice(i, i + BATCH_SIZE);
+    const valuePlaceholders = [];
+    const params = [];
+    chunk.forEach((row, rowIdx) => {
+      const placeholders = columns.map((_, colIdx) => `$${rowIdx * columns.length + colIdx + 1}`);
+      valuePlaceholders.push(`(${placeholders.join(', ')})`);
+      params.push(...row);
+    });
+    const sql = `INSERT INTO ${table} (${colNames}) VALUES ${valuePlaceholders.join(', ')} ON CONFLICT (id) DO NOTHING`;
+    await client.query(sql, params);
+  }
+}
+
 /**
  * Seeds the in-memory or database store with a specified number of Synthea patients.
  * Prioritizes authentic Synthea CSV data, expanding with generator if count exceeds available.
@@ -154,6 +172,7 @@ async function getPatientById(id, { role = 'Doctor' } = {}) {
  * @returns {Promise<{ seededCount: number, source: string }>}
  */
 async function seedDataset(count = 50) {
+  console.log(`[DataLayer] seedDataset called with count: ${count}`);
   let dataset = loadSyntheaPatients({ limit: count });
   if (!dataset || dataset.length === 0) {
     dataset = generateSyntheaDataset(count);
@@ -162,102 +181,101 @@ async function seedDataset(count = 50) {
     dataset = [...dataset, ...additional];
   }
 
+  console.log(`[DataLayer] Dataset prepared: ${dataset.length} records`);
   inMemoryPatients = [...dataset];
 
   const dbAvailable = await checkDbConnection();
   if (dbAvailable) {
+    console.log('[DataLayer] Connecting client to PostgreSQL...');
     const client = await pool.connect();
+    console.log('[DataLayer] Client connected. Beginning batch transaction...');
     try {
       await client.query('BEGIN');
-      for (const p of dataset) {
-        await client.query(
-          `INSERT INTO patients (id, first_name, last_name, gender, birth_date, address, phone, primary_condition, assigned_doctor, confidential_notes)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           ON CONFLICT (id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-          [p.id, p.firstName, p.lastName, p.gender, p.birthDate, p.address, p.phone, p.primaryCondition, p.assignedDoctor, p.confidentialNotes]
-        );
 
+      // 1. Batch Patients
+      const patientRows = dataset.map((p) => [
+        p.id,
+        p.firstName,
+        p.lastName,
+        p.gender,
+        p.birthDate,
+        p.address,
+        p.phone,
+        p.primaryCondition,
+        p.assignedDoctor,
+        p.confidentialNotes,
+      ]);
+      await batchInsert(
+        client,
+        'patients',
+        ['id', 'first_name', 'last_name', 'gender', 'birth_date', 'address', 'phone', 'primary_condition', 'assigned_doctor', 'confidential_notes'],
+        patientRows
+      );
+
+      // 2. Aggregate & Batch Sub-Entities
+      const allEncounters = [];
+      const allDiagnoses = [];
+      const allMedications = [];
+      const allObservations = [];
+      const allAllergies = [];
+      const allProcedures = [];
+      const allImmunizations = [];
+      const allAppointments = [];
+
+      for (const p of dataset) {
         if (p.encounters) {
           for (const enc of p.encounters) {
-            await client.query(
-              `INSERT INTO encounters (id, patient_id, encounter_type, code, description, provider, start_date, end_date)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
-              [enc.id || randomUUID(), p.id, enc.encounter_type, enc.code, enc.description, enc.provider, enc.start_date || new Date().toISOString(), enc.end_date || null]
-            );
+            allEncounters.push([enc.id || randomUUID(), p.id, enc.encounter_type, enc.code, enc.description, enc.provider, enc.start_date || new Date().toISOString(), enc.end_date || null]);
           }
         }
-
         if (p.diagnoses) {
           for (const d of p.diagnoses) {
-            await client.query(
-              `INSERT INTO diagnoses (id, patient_id, code, description, onset_date, status)
-               VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
-              [d.id || randomUUID(), p.id, d.code, d.description, d.onset_date || null, d.status || 'active']
-            );
+            allDiagnoses.push([d.id || randomUUID(), p.id, d.code, d.description, d.onset_date || null, d.status || 'active']);
           }
         }
-
         if (p.medications) {
           for (const m of p.medications) {
-            await client.query(
-              `INSERT INTO medications (id, patient_id, code, description, dosage, status, start_date, end_date)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
-              [m.id || randomUUID(), p.id, m.code, m.description, m.dosage, m.status || 'active', m.start_date || null, m.end_date || null]
-            );
+            allMedications.push([m.id || randomUUID(), p.id, m.code, m.description, m.dosage, m.status || 'active', m.start_date || null, m.end_date || null]);
           }
         }
-
         if (p.observations) {
           for (const o of p.observations) {
-            await client.query(
-              `INSERT INTO observations (id, patient_id, code, description, value, unit, recorded_date)
-               VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
-              [o.id || randomUUID(), p.id, o.code, o.description, o.value, o.unit, o.recorded_date || new Date().toISOString()]
-            );
+            allObservations.push([o.id || randomUUID(), p.id, o.code, o.description, o.value, o.unit, o.recorded_date || new Date().toISOString()]);
           }
         }
-
         if (p.allergies) {
           for (const a of p.allergies) {
-            await client.query(
-              `INSERT INTO allergies (id, patient_id, allergen, reaction, severity, recorded_date)
-               VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
-              [a.id || randomUUID(), p.id, a.allergen, a.reaction, a.severity, a.recorded_date || null]
-            );
+            allAllergies.push([a.id || randomUUID(), p.id, a.allergen, a.reaction, a.severity, a.recorded_date || null]);
           }
         }
-
         if (p.procedures) {
           for (const pr of p.procedures) {
-            await client.query(
-              `INSERT INTO procedures (id, patient_id, code, description, performed_date)
-               VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-              [pr.id || randomUUID(), p.id, pr.code, pr.description, pr.performed_date || null]
-            );
+            allProcedures.push([pr.id || randomUUID(), p.id, pr.code, pr.description, pr.performed_date || null]);
           }
         }
-
         if (p.immunizations) {
           for (const im of p.immunizations) {
-            await client.query(
-              `INSERT INTO immunizations (id, patient_id, vaccine_code, description, administered_date)
-               VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-              [im.id || randomUUID(), p.id, im.vaccine_code, im.description, im.administered_date || null]
-            );
+            allImmunizations.push([im.id || randomUUID(), p.id, im.vaccine_code, im.description, im.administered_date || null]);
           }
         }
-
         if (p.appointments) {
           for (const ap of p.appointments) {
-            await client.query(
-              `INSERT INTO appointments (id, patient_id, doctor_name, department, appointment_date, status, notes)
-               VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
-              [ap.id || randomUUID(), p.id, ap.doctor_name, ap.department, ap.appointment_date || new Date().toISOString(), ap.status || 'scheduled', ap.notes]
-            );
+            allAppointments.push([ap.id || randomUUID(), p.id, ap.doctor_name, ap.department, ap.appointment_date || new Date().toISOString(), ap.status || 'scheduled', ap.notes]);
           }
         }
       }
+
+      await batchInsert(client, 'encounters', ['id', 'patient_id', 'encounter_type', 'code', 'description', 'provider', 'start_date', 'end_date'], allEncounters);
+      await batchInsert(client, 'diagnoses', ['id', 'patient_id', 'code', 'description', 'onset_date', 'status'], allDiagnoses);
+      await batchInsert(client, 'medications', ['id', 'patient_id', 'code', 'description', 'dosage', 'status', 'start_date', 'end_date'], allMedications);
+      await batchInsert(client, 'observations', ['id', 'patient_id', 'code', 'description', 'value', 'unit', 'recorded_date'], allObservations);
+      await batchInsert(client, 'allergies', ['id', 'patient_id', 'allergen', 'reaction', 'severity', 'recorded_date'], allAllergies);
+      await batchInsert(client, 'procedures', ['id', 'patient_id', 'code', 'description', 'performed_date'], allProcedures);
+      await batchInsert(client, 'immunizations', ['id', 'patient_id', 'vaccine_code', 'description', 'administered_date'], allImmunizations);
+      await batchInsert(client, 'appointments', ['id', 'patient_id', 'doctor_name', 'department', 'appointment_date', 'status', 'notes'], allAppointments);
+
       await client.query('COMMIT');
+      console.log(`[DataLayer] Batch insertion committed for ${dataset.length} patients and all clinical entities.`);
       return { seededCount: dataset.length, source: 'PostgreSQL Database (Neon)' };
     } catch (err) {
       await client.query('ROLLBACK');
