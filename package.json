@@ -11,6 +11,7 @@
     "test:data": "node tests/dataLayer.test.js",
     "test:decision": "node tests/accessDecision.test.js",
     "test:integration": "node tests/integrationApi.test.js",
+    "benchmark": "node tests/scalabilityBenchmark.test.js",
     "seed": "node db/seed.js",
     "test:db": "node db/test-connection.js"
   },
