@@ -28,14 +28,14 @@ CREATE TABLE users (
 -- 2. Patients (Core Demographics & Summary)
 CREATE TABLE patients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
     gender VARCHAR(10) NOT NULL,
     birth_date DATE NOT NULL,
-    address VARCHAR(255),
-    phone VARCHAR(30),
-    primary_condition VARCHAR(100),
-    assigned_doctor VARCHAR(100),
+    address TEXT,
+    phone VARCHAR(50),
+    primary_condition TEXT,
+    assigned_doctor VARCHAR(150),
     confidential_notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -45,10 +45,10 @@ CREATE TABLE patients (
 CREATE TABLE encounters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    encounter_type VARCHAR(50) NOT NULL,
-    code VARCHAR(50),
+    encounter_type VARCHAR(100) NOT NULL,
+    code VARCHAR(100),
     description TEXT NOT NULL,
-    provider VARCHAR(100),
+    provider VARCHAR(150),
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP
 );
@@ -57,20 +57,20 @@ CREATE TABLE encounters (
 CREATE TABLE diagnoses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    code VARCHAR(50),
+    code VARCHAR(100),
     description TEXT NOT NULL,
     onset_date DATE,
-    status VARCHAR(30) DEFAULT 'active'
+    status VARCHAR(50) DEFAULT 'active'
 );
 
 -- 5. Medications
 CREATE TABLE medications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    code VARCHAR(50),
+    code VARCHAR(100),
     description TEXT NOT NULL,
-    dosage VARCHAR(50),
-    status VARCHAR(30) DEFAULT 'active',
+    dosage TEXT,
+    status VARCHAR(50) DEFAULT 'active',
     start_date DATE,
     end_date DATE
 );
@@ -79,10 +79,10 @@ CREATE TABLE medications (
 CREATE TABLE observations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    code VARCHAR(50),
+    code VARCHAR(100),
     description TEXT NOT NULL,
-    value VARCHAR(50) NOT NULL,
-    unit VARCHAR(30),
+    value TEXT NOT NULL,
+    unit TEXT,
     recorded_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -90,9 +90,9 @@ CREATE TABLE observations (
 CREATE TABLE allergies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    allergen VARCHAR(100) NOT NULL,
-    reaction VARCHAR(100),
-    severity VARCHAR(30),
+    allergen TEXT NOT NULL,
+    reaction TEXT,
+    severity VARCHAR(50),
     recorded_date DATE
 );
 
@@ -100,7 +100,7 @@ CREATE TABLE allergies (
 CREATE TABLE procedures (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    code VARCHAR(50),
+    code VARCHAR(100),
     description TEXT NOT NULL,
     performed_date DATE
 );
@@ -109,7 +109,7 @@ CREATE TABLE procedures (
 CREATE TABLE immunizations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    vaccine_code VARCHAR(50),
+    vaccine_code VARCHAR(100),
     description TEXT NOT NULL,
     administered_date DATE
 );
@@ -118,10 +118,10 @@ CREATE TABLE immunizations (
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    doctor_name VARCHAR(100) NOT NULL,
-    department VARCHAR(50),
+    doctor_name VARCHAR(150) NOT NULL,
+    department VARCHAR(100),
     appointment_date TIMESTAMP NOT NULL,
-    status VARCHAR(30) DEFAULT 'scheduled',
+    status VARCHAR(50) DEFAULT 'scheduled',
     notes TEXT
 );
 
