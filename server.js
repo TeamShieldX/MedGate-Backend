@@ -12,8 +12,15 @@ const PORT = process.env.PORT || 5000;
 
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 app.use(cors({
-  origin: clientUrl,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile, Postman, curl) or any localhost/127.0.0.1 port
+    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || origin === clientUrl) {
+      return callback(null, true);
+    }
+    return callback(null, origin);
+  },
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-role', 'x-user-id', 'x-user-name'],
 }));
 
 app.use(express.json());
