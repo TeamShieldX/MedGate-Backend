@@ -46,6 +46,7 @@ async function evaluateAccess(user = {}, resource = '', action = 'read', context
     reason,
     resourceId: context.resourceId || null,
     ipAddress: context.ipAddress || context.ip || '127.0.0.1',
+    skipDb: context.skipDb || false,
   });
 
   return {
